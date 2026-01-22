@@ -84,4 +84,32 @@
 
 ## LLM Serving Systems (KV/Prefix/Cache-Centric)
 
-- (FAST'2025) [**Mooncake: Trading More Storage for Less Computation — A KVCache-centric Architecture for Serving LLM Chatbot**](https://www.usenix.org/conference/fast25/presentation/qin) (KVCache-centric serving, m
+- (FAST'2025) [**Mooncake: Trading More Storage for Less Computation — A KVCache-centric Architecture for Serving LLM Chatbot**](https://www.usenix.org/conference/fast25/presentation/qin) (KVCache-centric serving, multi-tier storage, precomputation): 以 KV cache 为中心重新组织推理服务：更多使用存储换取更少计算，通过分层存储与预计算策略降低重复 prefill；适合多轮对话/高复用前缀的聊天服务，也可迁移到 RAG 中复用频繁的文档块场景。
+
+- (FAST'2025) [**IMPRESS: An Importance-Informed Multi-Tier Prefix KV Storage System for Large Language Model Inference**](https://www.usenix.org/system/files/fast25-chen-weijian-impress.pdf) (multi-tier prefix KV, hot/cold separation, prefetching): 用重要性评估把前缀 KV 分成冷热并放到多层介质，结合预取减少 I/O；适合 prefix 命中率高的生产推理（包括 RAG 中“固定模板+检索段”模式），核心是把 KV 当作可管理的数据对象来做存储系统优化。
+
+- (arXiv'2025) [**ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference**](https://arxiv.org/abs/2410.21465) (shadow cache, tiered KV, throughput-oriented): 用“主缓存+影子缓存”机制：主缓存保留高频 token，影子缓存保留关键低频 token，在吞吐与质量之间做分层折中；适合长上下文与长文 RAG 的高并发服务，强调吞吐优先但避免关键证据被驱逐。
+
+- (OSDI'2024) [**DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving**](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf) (prefill/decode disaggregation, KV memory pressure isolation, goodput optimization): 将 prefill 与 decode 解耦到不同资源/流水线，减少相互干扰并提高整体 goodput；适合 RAG 中 prefill 占比极高的负载，把“长输入 prefill”与“短步 decode”分离后更利于做 KV/显存与算力的独立优化。
+
+- (OSDI'2024) [**Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve**](https://www.usenix.org/conference/osdi24/presentation/agrawal) (scheduler, throughput-latency tradeoff, batch/interleave control): 通过更精细的调度与批处理/交织策略，缓解吞吐与延迟的矛盾；适合 RAG 服务在高峰期做动态调度，间接影响 KV cache 峰值占用与请求排队抖动。
+
+- (OSDI'2024) [**ServerlessLLM: Low-Latency Serverless Inference for Large Language Models**](https://www.usenix.org/conference/osdi24/presentation/fu) (serverless inference, cold-start mitigation, elastic serving): 面向弹性伸缩与多租户，降低 serverless 推理的冷启动与调度开销；对 RAG 来说适合“潮汐流量+多模型/多版本”场景，KV/前缀缓存更依赖外部化与跨实例共享策略。
+
+- (USENIX ATC'2025) [**KVCache Cache in the Wild: Characterizing and Optimizing KVCache Cache at a Large Cloud Provider**](https://www.usenix.org/conference/atc25/presentation/wang-jiahao) (workload characterization, KV reuse patterns, eviction policy design): 基于真实生产 trace 系统刻画 KV cache 复用模式（复用倾斜、类别内可预测等），并据此设计更匹配负载的驱逐策略；适合做生产系统的策略落地与容量规划，尤其对 RAG 这种复用强但分布复杂的业务很有参考价值。
+
+- (arXiv'2025) [**METIS: Fast Quality-Aware RAG Systems with Configuration Adaptation**](https://arxiv.org/abs/2412.10543) (quality-aware scheduling, configuration adaptation, chunk count tuning): 在 RAG 端到端链路上联合做调度与配置自适应（例如每个请求检索 chunk 数、合成策略），在质量不降的情况下显著降低延迟；它不是直接的 KV 算法，但通过减少无效 chunk 与优化合成流程，能间接降低 KV 压力与 prefill 成本。
+
+---
+
+## Hardware / Disaggregated Acceleration for RAG
+
+- (VLDB'2025) [**Chameleon: A Heterogeneous and Disaggregated Accelerator System for Retrieval-Augmented Language Models**](https://www.vldb.org/pvldb/vol18/p42-jiang.pdf) (heterogeneous accelerators, disaggregation, retrieval+LLM co-design): 将检索与 LLM 推理分别映射到更匹配的硬件（如 FPGA/专用检索加速 + GPU 推理），并通过解耦式架构独立扩展两类资源；适合大规模 RAG 服务，把检索侧吞吐/能效与推理侧 KV/显存瓶颈分开优化。
+
+- (ISCA'2025) [**REIS: A High-Performance and Energy-Efficient Retrieval System with In-Storage Processing**](https://arxiv.org/abs/2506.16444) (in-storage processing, ANNS acceleration, data movement reduction): 在存储侧做近数据处理以降低向量检索的数据搬运成本；对 RAG 来说能降低检索端延迟并释放 host 资源，让更多预算留给 LLM 推理（包括 KV cache 管理与更大上下文窗口）。
+
+---
+
+## Surveys
+
+- (OpenReview'2025) [**A Survey on Large Language Model Acceleration based on KV Cache**](https://openreview.net/forum?id=z3JZzu9EA3) (taxonomy, KV management, serving optimization): 对 KV cache 相关的加速方法做系统分类与对比（压缩/驱逐/共享/系统实现等），适合用来快速建立领域地图，并据此定位“RAG+KV”优化在方法谱系中的位置。
