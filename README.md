@@ -44,31 +44,26 @@
 
 ---
 
-## KV Cache Compression / Eviction for Long Context (RAG-Compatible)
+## Semantic-Aware RAG Granularity & Segmentation (RAG semantic analysis, chunking/blocking, structure-aligned compression)
 
-- (ICLR'2026 Submission) [**SparseCache: Extreme Sparse Coding for KV Cache Compression**](https://openreview.net/forum?id=43zTdoRqY4) (dictionary learning, sparse coding, OMP reconstruction, extreme compression): 用字典学习+稀疏编码压缩 KV：离线学习全局共享字典，在线用 OMP 得到稀疏系数并重构 KV；适合 KV 成本极高的长上下文/RAG 场景，思路是把 KV 表示映射到可高效存储的稀疏系数空间。
+- (arXiv'2025) [**SABlock: Semantic-Aware KV Cache Eviction with Adaptive Compression Block Size**](https://arxiv.org/abs/2510.22556) (semantic segmentation, adaptive block sizing, structure-aligned eviction, long-context): 面向长上下文/RAG 中“按 token 或固定 block 驱逐会切碎语义结构、导致关键证据断裂式丢失”的问题，先做语义分段使压缩边界贴合语言结构，再在段内用 segment-guided scoring 估计重要性，最后对每段用 budget-driven search 自适应选择 block size，在“语义完整性 vs 压缩效率”之间动态折中，重点减少语义边界被硬切导致的不可逆损失。
+- (arXiv'2025) [**ChunkKV: Semantic-Preserving KV Cache Compression for Efficient Long-Context LLM Inference**](https://arxiv.org/abs/2502.00299) (semantic chunking, chunk-level selection, context fragmentation mitigation, layer-wise index reuse): 面向 token-level 重要性评估容易造成“只保留零散关键词、丢掉句子级语义约束”的问题，把压缩决策单位提升为语义 chunk：以 chunk 为单位保留/丢弃来避免语义碎片；并利用多层保留索引相似性做 layer-wise index reuse 降低维护开销，适合长文 QA/RAG 中证据跨句跨段分布且需要语义连贯的任务。
+- (arXiv'2025) [**SentenceKV: Efficient LLM Inference via Sentence-Level Semantic KV Caching**](https://arxiv.org/abs/2504.00970) (sentence-level caching, semantic coherence, semantic indexing, CPU offload): 面向“语义保持方法往往 TTFT 高、token-level 压缩又破坏句内语义”的矛盾，把 KV 管理提升到句子级：prefill 阶段将 token 聚合成句子级语义向量并保留在 GPU，同时把细粒度 KV offload；decode 阶段按 query 与句子向量的语义相似性选择性取回句子相关 KV，减少无关 KV 加载并保持句子语义完整性，适合证据通常以句子为自洽单元的 RAG。
+- (arXiv'2024) [**ClusterKV: Manipulating LLM KV Cache in Semantic Space for Recallable Compression**](https://arxiv.org/abs/2412.03213) (semantic clustering, recallable compression, cluster-level recall, long-context QA): 面向“驱逐后不可召回导致后期生成突然需要旧证据而崩”的问题，把召回粒度从位置页提升到语义簇：在语义空间对 KV/Token 聚类并以 cluster 为单位做选择、索引与缓存；当后续步骤需要旧信息时按语义簇召回，从而在小 cache budget 下更稳地覆盖“证据晚出现/晚引用”的长链路 RAG 生成与推理场景。
 
-- (ICLR'2026 Submission) [**RACC: Retrieval-Augmented KV Cache Compression in Long-Context Generation**](https://openreview.net/forum?id=y2xi9ouYcg) (retrieval-aware importance, token ranking, selective retention): 引入“检索相关性”来评估 token 的重要性，对 KV 做检索感知压缩：更偏向保留与检索证据强相关的上下文；适用于 RAG 长文生成中“输入很长但真正关键证据很稀疏”的场景，可与其他系统优化正交叠加。
+---
 
-- (arXiv'2025) [**OjaKV: Context-Aware Online Low-Rank KV Cache Compression with Oja’s Rule**](https://arxiv.org/abs/2501.07137) (online low-rank, Oja’s rule, drift control, FlashAttention compatible): 通过 Oja 规则在线更新低秩子空间，对 KV 做**上下文感知的在线低秩压缩**；核心在于动态更新压缩基以避免上下文漂移，并保持对高效注意力实现的兼容性，适合流式/长对话/在线 RAG 推理。
+## Dynamic Cache Maintenance (eviction/refresh/query-agnostic reuse/streaming stabilization)
 
-- (ICML'2025) [**LaCache: Ladder-Shaped KV Caching for Efficient Long-Context Modeling of Large Language Models**](https://proceedings.mlr.press/v267/shi25b.html) (ladder-shaped caching, cross-layer KV storage, distance-aware compression): 采用“梯形”KV 缓存结构与距离相关的动态压缩策略，在持续生成时避免 OOM；适合长上下文生成与长文 RAG，把缓存结构设计与压缩策略结合来降低峰值显存。
+- (arXiv'2024) [**RefreshKV: Updating Small KV Cache During Long-form Generation**](https://arxiv.org/abs/2411.05787) (periodic refresh, full-vs-subset attention alternation, attention-pattern-driven update, long-form): 面向“纯驱逐一旦丢了就回不来、长文生成后期质量塌陷”的问题，交替执行全上下文注意力与小缓存注意力；在若干步后用一次全注意力观测到的 attention pattern 重建/更新小 KV，实现“保持小 cache 但不永久遗忘”，适用于长文 RAG（报告/综述/长回答）这种后期仍可能回引用早期证据的场景。
+- (arXiv'2025) [**KVzip: Query-Agnostic KV Cache Compression with Context Reconstruction**](https://arxiv.org/abs/2505.23416) (query-agnostic eviction, context reconstruction scoring, multi-query reuse, robust caching): 面向生产 RAG 中“同一上下文会被不同 query 反复复用”的形态，提出 query-agnostic 的重要性度量：用模型从压缩 KV 中重建原始上下文的能力给 KV 打分并驱逐低分项，使压缩后的缓存对未来未知 query 更稳，避免 query-aware 策略在 multi-query 下抖动/掉点。
+- (arXiv'2023) [**Efficient Streaming Language Models with Attention Sinks (StreamingLLM)**](https://arxiv.org/abs/2309.17453) (streaming stabilization, attention sinks, sliding-window compatibility, recomputation avoidance): 面向流式对话/持续 RAG（上下文不断增长）中滑窗在超过 cache size 后失稳的问题，利用 attention sink 现象：即便采用滑窗也固定保留少量 sink tokens 的 KV 来稳定注意力分布，从而减少重算并避免性能断崖，适合“不断追加检索证据”的 streaming RAG。
+- (arXiv'2023) [**H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models**](https://arxiv.org/abs/2306.14048) (heavy-hitter eviction, recent+heavy hitter retention, dynamic submodular optimization, decode efficiency): 面向 decode 阶段 KV 带宽/显存瓶颈，基于“少量 heavy hitter tokens 贡献大部分注意力价值”的观察，动态维持 recent tokens 与 heavy hitters 的平衡；并把驱逐建模为动态优化问题给出理论性质，是动态驱逐路线中常见的基础对照基线。
+- (arXiv'2024) [**SnapKV: LLM Knows What You are Looking for Before Generation**](https://arxiv.org/abs/2404.14469) (head-wise selection, clustered KV positions, observation window, plug-and-play): 面向无需训练、可直接插入推理栈的驱逐需求，利用 prompt 尾部 observation window 估计各 head 的注意力模式，做 head-wise 的 clustered important positions 选择以压缩 KV；强调以较低在线开销获得稳定的速度/显存收益，适合模板较固定但检索证据变化大的在线 RAG。
+- (arXiv'2025) [**CAKE: Cascading and Adaptive KV Cache Eviction with Layer Preferences**](https://arxiv.org/abs/2503.12491) (layer preferences, adaptive budgeting, cascading eviction, temporal importance shift): 面向“不同层对长程依赖需求不同、统一预算会浪费或伤关键层”的问题，估计 layer preferences（空间/时间维注意力动态）并做层间自适应预算分配，再用级联式管理满足全局内存预算；同时引入考虑重要性随时间漂移的指标，降低驱逐对后续步骤的连锁伤害，适合长上下文 RAG 的稳健推理链。
+- (arXiv'2025) [**LLMs Know What to Drop: Self-Attention Guided KV Cache Eviction for Efficient Long-Context Inference (SAGE-KV)**](https://arxiv.org/abs/2503.08879) (self-attention-guided eviction, one-shot top-k after prefill, head+token selection, low overhead): 面向超长上下文推理，利用 prefill 后可观测到的注意力稀疏性，一次性在 token 与 head 两个维度做 top-k 选择压缩 KV，并在整个 decode 期间复用该压缩结果，避免每步动态选择的开销；适合对吞吐/时延敏感的 RAG 在线服务。
+- (arXiv'2024) [**Ada-KV: Optimizing KV Cache Eviction by Adaptive Budget Allocation for Efficient LLM Inference**](https://arxiv.org/abs/2407.11550) (head-wise adaptive budget allocation, plug-and-play, theoretical bound, eviction quality): 面向“不同 head 信息密度差异大但多数方法均匀分配预算导致利用率低”的问题，给出 attention 输出误差的理论上界并据此优化 head-wise 预算分配；作为可插拔模块可叠加到多种驱逐策略上，在相同总预算下提升驱逐后的质量稳定性，适合 RAG 中 head 分工明显（模板/证据/指令）的模型。
 
-- (ICML'2025) [**SpeCache: Speculative Key-Value Caching for Efficient Generation of LLMs**](https://proceedings.mlr.press/v267/jie25a.html) (CPU offload, speculative prefetch, top-k KV fetch, VRAM reduction): 将完整 KV cache 卸载到 CPU 内存，GPU 只保留低精度摘要并按步**动态取回 top-k 关键 KV**；为避免 CPU↔GPU 传输带来额外时延，引入投机预测与预取并行，适合显存紧张但主机内存充足的长上下文/RAG 服务。
-
-- (ACL'2025) [**RefreshKV: Updating Small KV Cache During Long-form Generation**](https://aclanthology.org/2025.acl-long.1211.pdf) (periodic refresh, attention-pattern-driven update, long-form generation): 在长文生成中交替执行“全上下文注意力”和“小缓存注意力”，并根据全注意力的模式周期性重建小 KV；适合长篇写作/长文 RAG，目标是在接近驱逐法的速度收益下减少遗忘带来的质量劣化。
-
-- (ICLR'2025) [**RazorAttention: Efficient KV Cache Compression Through Retrieval Heads**](https://openreview.net/forum?id=tkiZQlL04w) (retrieval heads, head-wise caching, compensation token, training-free): 发现少量 attention head 负责全局检索式注意力，其余多为局部注意力；据此对不同 head 采用差异化缓存：关键 head 保留全量 KV，非关键 head 丢弃远端 token，并用补偿 token 恢复信息；适合无需训练、希望与高效注意力内核兼容的压缩部署。
-
-- (NeurIPS'2024) [**ZipCache: Accurate and Efficient KV Cache Quantization with Salient Token Identification**](https://openreview.net/forum?id=5t4ZAkPiJs) (KV quantization, salient token identification, FlashAttention-friendly): 在 KV 量化中结合显著 token 识别以提升高压缩比下的精度稳定性，并设计与快速注意力实现兼容的近似计算；适合“量化优先”的推理栈，在不大改系统结构的情况下压低 KV 占用与时延。
-
-- (NeurIPS'2025) [**ChunkKV: Semantic-Preserving KV Cache Compression for Efficient Long-Context Inference**](https://openreview.net/forum?id=20JDhbJqn3) (chunk-based compression, semantic grouping, context fragmentation mitigation): 将压缩基本单元从 token 提升到“语义 chunk”，减少逐 token 重要性评估造成的语义碎片；适合长文与 RAG 场景中需要跨句/跨段语义一致性的任务，在高压缩率下更稳。
-
-- (NeurIPS'2025) [**MUSTAFAR: Promoting Unstructured Sparsity for KV Cache Pruning in LLM Inference**](https://openreview.net/forum?id=C69741fMFX) (unstructured sparsity, bitmap sparse format, sparse attention kernel): 用非结构化稀疏直接剪枝 KV，并配套 bitmap 稀疏格式与自定义 attention kernel 在压缩态上计算；适合 decode 阶段显存/带宽受限的服务，把“压缩收益”与“内核加速”绑定以抵消运行时开销。
-
-- (NeurIPS'2022025) [**KVzip: Query-Agnostic KV Cache Compression with Context Reconstruction**](https://openreview.net/forum?id=JFygzwx8SJ) (query-agnostic eviction, context reconstruction scoring, multi-query reuse): 针对多查询复用的场景，KVzip 用“能否从压缩 KV 重建原始上下文”来评估 KV 重要性，从而实现**与查询无关**的驱逐；适合 RAG 中同一文档块会被不同问题复用的情况，避免 query-aware 策略在多查询下不稳定。
-
-- (ICLR'2024) [**Efficient Streaming Language Models with Attention Sinks (StreamingLLM)**](https://openreview.net/forum?id=NG7sS51zVF) (streaming inference, attention sinks, long context stabilization): 发现“attention sink”现象并提出流式推理框架：即便采用滑窗也保留关键 sink token 的 KV，使模型在超长流式输入下更稳定；适合多轮对话与持续检索更新的 RAG（流式上下文不断增长），降低重算与漂移风险。
 
 - (NAACL'2025) [**A Systematic Study of Cross-Layer KV Sharing for Efficient LLM Inference**](https://aclanthology.org/2025.naacl-short.34.pdf) (cross-layer KV sharing, unified framework, configuration sweep): 系统梳理并统一不同跨层 KV sharing 方案（哪些层共享、Q 与哪层 KV 配对等），给出在不同提示长度/压缩比下的吞吐与效果规律；适合做工程选型与配置扫描，为“跨层共享是否值得”提供经验边界。
 
