@@ -46,6 +46,24 @@
 
 ## KV Cache Compression / Eviction for Long Context (RAG-Compatible)
 
+- (NeurIPS'2023) [**H$_2$O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models**](https://arxiv.org/abs/2306.14048)(heavy-hitter eviction, sparse attention, dynamic cache): 针对 LLM 推理中 KV Cache 显存占用过大的问题；发现注意力矩阵中存在 "Heavy Hitter"（高频关键 Token）现象，提出基于累积注意力分数的动态驱逐策略，只保留最重要的少量 KV；在保持生成质量的同时，大幅降低了显存占用并提升了推理吞吐量。
+
+- ⭐⭐(ICLR'2024) [**Efficient Streaming Language Models with Attention Sinks (StreamingLLM)**](https://openreview.net/forum?id=NG7sS51zVF) (streaming inference, attention sinks, long context stabilization): 发现“attention sink”现象并提出流式推理框架：即便采用滑窗也保留关键 sink token 的 KV，使模型在超长流式输入下更稳定；适合多轮对话与持续检索更新的 RAG（流式上下文不断增长），降低重算与漂移风险。
+
+- ⭐⭐⭐(NeurIPS'2024) [**SnapKV: LLM Knows What You Are Looking for before Generation**](https://proceedings.neurips.cc/paper_files/paper/2024/file/28ab418242603e0f7323e54185d19bde-Paper-Conference.pdf)(automatic pattern selection, compression-friendly, long-context retrieval): 针对长上下文 RAG 中大量无关上下文导致检索精度下降及显存浪费的问题；利用模型对 Prompt 的注意力模式自动识别关键信息簇（Clustering），像“快照”一样只保留关键片段对应的 KV；显著提升了长文处理的生成速度与显存效率，且不需要微调即可应用于各种长窗口模型。
+
+- ⭐⭐(COLM'2025) [**PyramidKV: Dynamic KV Cache Compression based on Pyramidal Information Funneling**](https://arxiv.org/abs/2406.02069)(layer-wise compression, pyramidal allocation, information density): 针对传统 KV 压缩忽略了不同层级信息密度差异（深层需要更少上下文）的问题；提出金字塔式的压缩策略，浅层保留更多细节 KV，深层逐级减少 KV 预算；在极高压缩比下维持了优于均匀压缩的长文理解能力与Passkey 检索精度。
+
+- ⭐⭐(NeurIPS'2025) [**Ada-KV: Optimizing KV Cache Eviction by Adaptive Budget Allocation for Efficient LLM Inference**](https://arxiv.org/abs/2407.11550)(adaptive budget, head-wise allocation, dynamic capacity): 针对不同注意力头（Attention Head）对上下文依赖程度不同（有的头关注全局，有的关注局部）的问题；通过分析 Query 向量的范数等特征，动态为每个头分配不同的 KV 缓存预算；实现了更精细化的显存管理，在相同显存预算下获得了更高的模型精度。
+
+- (NeruIPS'2025) [**AttentionPredictor: Temporal Patterns Matter for KV Cache Compression**](https://arxiv.org/abs/2502.04077)(temporal awareness, future relevance prediction, lightweight predictor): 针对现有基于历史注意力分数驱逐 KV 可能误删未来重要 Token 的滞后性问题；引入一个轻量级预测器来预判 Token 在未来的注意力权重（Temporal Patterns），而非仅依赖历史统计；减少了误删关键信息的风险，提升了压缩后的生成连贯性与长程依赖能力。
+
+- (ICLR'2026 Submission) [**RocketKV: Accelerating Long-Context LLM Inference via Two-Stage KV Cache Compression**](https://arxiv.org/abs/2502.14051)(two-stage compression, system optimization, end-to-end speedup): 针对现有 KV 压缩算法仅关注显存减少而忽视实际系统加速的问题；结合 SnapKV 的两阶段策略（先粗筛后精选）与底层系统优化（如自定义 Kernel），不仅压缩 KV 大小，更直接优化了访存与计算流水线；实现了真正的端到端推理延迟降低与吞吐量提升。
+
+- (NAACL'2025) [**A Systematic Study of Cross-Layer KV Sharing for Efficient LLM Inference**](https://aclanthology.org/2025.naacl-short.34.pdf) (cross-layer KV sharing, unified framework, configuration sweep): 系统梳理并统一不同跨层 KV sharing 方案（哪些层共享、Q 与哪层 KV 配对等），给出在不同提示长度/压缩比下的吞吐与效果规律；适合做工程选型与配置扫描，为“跨层共享是否值得”提供经验边界。
+
+- ⭐⭐⭐(NeurIPS'2025) [**KVzip: Query-Agnostic KV Cache Compression with Context Reconstruction**](https://openreview.net/forum?id=JFygzwx8SJ) (query-agnostic eviction, context reconstruction scoring, multi-query reuse): 针对多查询复用的场景，KVzip 用“能否从压缩 KV 重建原始上下文”来评估 KV 重要性，从而实现**与查询无关**的驱逐；适合 RAG 中同一文档块会被不同问题复用的情况，避免 query-aware 策略在多查询下不稳定。
+
 - (ICLR'2026 Submission) [**SparseCache: Extreme Sparse Coding for KV Cache Compression**](https://openreview.net/forum?id=43zTdoRqY4) (dictionary learning, sparse coding, OMP reconstruction, extreme compression): 用字典学习+稀疏编码压缩 KV：离线学习全局共享字典，在线用 OMP 得到稀疏系数并重构 KV；适合 KV 成本极高的长上下文/RAG 场景，思路是把 KV 表示映射到可高效存储的稀疏系数空间。
 
 - (ICLR'2026 Submission) [**RACC: Retrieval-Augmented KV Cache Compression in Long-Context Generation**](https://openreview.net/forum?id=y2xi9ouYcg) (retrieval-aware importance, token ranking, selective retention): 引入“检索相关性”来评估 token 的重要性，对 KV 做检索感知压缩：更偏向保留与检索证据强相关的上下文；适用于 RAG 长文生成中“输入很长但真正关键证据很稀疏”的场景，可与其他系统优化正交叠加。
@@ -94,7 +112,17 @@
 
 ---
 
-## LLM Serving Systems (KV/Prefix/Cache-Centric)
+## LLM Serving Systems (KV/Prefix/Cache-Centric) / System Optimization
+
+- (SOSP'2023) [**Efficient Memory Management for Large Language Model Serving with PagedAttention**](https://arxiv.org/abs/2309.06180)(virtual memory, memory fragmentation, high throughput): 针对 LLM 服务中 KV cache 显存碎片化（内/外碎片）严重导致并发度受限的问题；引入操作系统虚拟内存中“分页”的思想，允许 KV cache 在物理显存中非连续存储；消除了显存碎片，极大提升了显存利用率与系统的推理吞吐量（Throughput）。
+
+- (NeurIPS'2022) [**FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness**](https://arxiv.org/abs/2205.14135)(IO-aware, tiling, linear memory): 针对 Transformer 注意力层由于频繁读写 HBM（高带宽内存）导致的 IO 瓶颈问题；通过 Tiling（分块）和重计算策略，减少 GPU HBM 与片上 SRAM 之间的数据搬运次数；在保持注意力计算精确性的同时，将显存复杂度降为线性，显著提升了训练/推理速度。
+
+- (ICLR'2025) [**Block-Attention for Efficient Prefilling**](https://arxiv.org/abs/2409.15355) (long-context prefill, dynamic sparsity, latency reduction): 针对长上下文输入在 Prefill 阶段计算量呈二次方增长（$O(N^2)$）导致首字延迟过高的问题；利用注意力矩阵的块状稀疏特征，在 Prefill 阶段动态识别并跳过无关的注意力块计算；在保证精度的前提下显著降低了长文输入的首字延迟（TTFT）与计算功耗。
+
+- (NeurIPS'2024) [**SGLang: Efficient Execution of Structured Language Model Programs**](https://proceedings.neurips.cc/paper_files/paper/2024/file/724be4472168f31ba1c9ac630f15dec8-Paper-Conference.pdf) (RadixAttention, automatic KV reuse, structured decoding): 针对复杂 LLM 编程模式（如 Agent、Chain-of-Thought）中 KV cache 复用困难及结构化输出效率低的问题；提出 RadixAttention（基于基数树的 KV 管理）自动跨请求复用前缀 KV，并结合解释器优化；大幅提升了多轮交互与复杂任务的服务吞吐量并降低了端到端延迟。
+
+- (Arxiv'2025) [**LMCache: An Efficient KV Cache Layer for Enterprise-Scale LLM Inference**](https://lmcache.ai/tech_report.pdf)(RadixAttention, automatic KV reuse, structured decoding): 针对复杂 LLM 编程模式（如 Agent、Chain-of-Thought）中 KV cache 复用困难及结构化输出效率低的问题；提出 RadixAttention（基于基数树的 KV 管理）自动跨请求复用前缀 KV，并结合解释器优化；大幅提升了多轮交互与复杂任务的服务吞吐量并降低了端到端延迟。
 
 - (FAST'2025) [**Mooncake: Trading More Storage for Less Computation — A KVCache-centric Architecture for Serving LLM Chatbot**](https://www.usenix.org/conference/fast25/presentation/qin) (KVCache-centric serving, multi-tier storage, precomputation): 以 KV cache 为中心重新组织推理服务：更多使用存储换取更少计算，通过分层存储与预计算策略降低重复 prefill；适合多轮对话/高复用前缀的聊天服务，也可迁移到 RAG 中复用频繁的文档块场景。
 
@@ -124,4 +152,18 @@
 
 ## Surveys
 
-- (OpenReview'2025) [**A Survey on Large Language Model Acceleration based on KV Cache**](https://openreview.net/forum?id=z3JZzu9EA3) (taxonomy, KV management, serving optimization): 对 KV cache 相关的加速方法做系统分类与对比（压缩/驱逐/共享/系统实现等），适合用来快速建立领域地图，并据此定位“RAG+KV”优化在方法谱系中的位置。
+- (TMLR'2025) [**A Survey on Large Language Model Acceleration based on KV Cache**](https://openreview.net/forum?id=z3JZzu9EA3) (taxonomy, KV management, serving optimization): 对 KV cache 相关的加速方法做系统分类与对比（压缩/驱逐/共享/系统实现等），适合用来快速建立领域地图，并据此定位“RAG+KV”优化在方法谱系中的位置。
+
+## Semantic Cache / RAG Cache
+
+- (NLPOSS'2023) [**GPTCache: An Open-Source Semantic Cache for LLM Applications Enabling Faster Answers and Cost Savings**](https://aclanthology.org/2023.nlposs-1.24.pdf) (semantic matching, modular design, cost reduction): 针对 LLM 应用中重复或相似查询导致的高昂 API 调用成本与响应延迟问题；通过向量嵌入（Embedding）计算语义相似度来检索历史问答对，替代传统的精确匹配缓存；显著降低了端到端延迟并节省了 Token 费用。
+
+- (VLDB'2025 demo paper) [**ContextCache: Context-Aware Semantic Cache for Multi-Turn Queries in Large Language Models**](https://arxiv.org/abs/2506.22791) (multi-turn dialogue, context management, hit rate optimization): 针对传统语义缓存忽略多轮对话上下文、导致在连续交互中命中率低的问题；引入上下文感知机制，结合历史对话信息构建缓存键值并进行语义匹配；优化了多轮会话场景下的缓存命中率与回答一致性。
+
+- (Arxiv'2025) [**vCache: Verified Semantic Prompt Caching**](https://arxiv.org/abs/2502.03771v4) (correctness verification, exact semantic equivalence, safety): 针对近似语义匹配可能导致缓存返回错误或不相关答案（False Positives）的准确性风险；引入轻量级的验证机制来确保检索到的缓存 Prompt 与当前输入在语义逻辑上的严格等价性；在保持低延迟优势的同时，大幅提升了缓存响应的准确性（Correctness）与安全性。
+
+- (EuroMLSys'2024) [**RAGCache: Efficient Knowledge Caching for Retrieval-Augmented Generation**](https://arxiv.org/abs/2404.12457) (knowledge retrieval caching, tiered storage, replacement policy): 针对 RAG 系统中检索与文档处理（Prefill）阶段的高计算开销与重复访问特性；设计了一种感知 RAG 知识结构的缓存系统，在 GPU/CPU 主存间分层缓存热门文档的中间状态（如 KV）；显著缩短了 RAG 的首字延迟（TTFT）并提升了系统吞吐量。
+
+- (NeurIPS'2025) [**SmartCache: Context-aware Semantic Cache for Efficient Multi-turn LLM Inference**](https://openreview.net/pdf/5bc13f5689dfb66b132abd36782eb71e1da88f36.pdf) (sub-graph matching, dynamic eviction, long-context efficiency): 针对复杂多轮推理中静态缓存策略难以识别高价值上下文片段的问题；提出基于子图匹配或动态策略的上下文感知缓存，智能识别并复用关键的语义片段；降低了长上下文推理的计算开销（FLOPs）并提高了推理效率。
+
+- (Arxiv'2025) [**Asteria: Semantic-Aware Cross-Region Caching for Agentic LLM Tool Access**](https://arxiv.org/abs/2509.17360) (distributed caching, agent tool use, cross-region latency): 针对 Agent 系统在跨地域调用工具（Tool Access）时的高延迟与数据传输瓶颈；构建语义感知的跨区域分布式缓存系统，专门复用昂贵的工具执行结果与推理中间态；有效降低了跨地域通信延迟并减少了工具重复调用成本。
