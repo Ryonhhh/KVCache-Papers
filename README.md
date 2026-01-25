@@ -53,6 +53,9 @@
 
 ## Cache in RAG/Agent Pipelines: Semantic / Tool / Knowledge Caching
 
+- (NeurIPS'2025) [**Generative Caching for Structurally Similar Prompts and Responses (GenCache)**](https://www.microsoft.com/en-us/research/wp-content/uploads/2025/09/GenCache_NeurIPS25.pdf) (generative cache, structurally similar prompts, agent workflows, correctness): 面向 agent/workflow 中“结构相似但细节不同”的 prompts，GenCache 不直接返回旧 response（避免语义缓存忽略关键差异导致错误），而是从同簇 prompt-response 对中抽取“生成模式”，以可执行 program 形式缓存；命中时本地执行 program 生成差异感知的新响应，在提高命中率的同时尽量控制 negative hit，并降低端到端时延。
+
+
 - (EuroMLSys'2024) [**RAGCache: Efficient Knowledge Caching for Retrieval-Augmented Generation**](https://arxiv.org/abs/2404.12457) (RAG pipeline caching, multi-level caching, order-sensitive reuse, consistency): 从系统视角做 RAG 多级缓存（检索结果/文档块/中间表示等），重点解决文档顺序敏感导致难复用的问题；通过缓存组织与一致性策略提升命中率，并在端到端链路上优化延迟与成本。
 
 - (NLPOSS'2023) [**GPTCache: An Open-Source Semantic Cache for LLM Applications Enabling Faster Answers and Cost Savings**](https://aclanthology.org/2023.nlposs-1.24.pdf) (semantic matching, embedding cache, modular design): 通过 embedding 语义相似度检索历史问答对以复用答案，降低重复调用导致的延迟与 token 成本，适合作为应用层语义缓存的工程基线。
@@ -159,3 +162,5 @@
 - (TMLR'2025) [**A Survey on Large Language Model Acceleration based on KV Cache**](https://openreview.net/forum?id=z3JZzu9EA3) (taxonomy, KV management, serving optimization): 系统梳理 KV cache 相关加速方法并给出分类与对比，适合快速建立领域地图并定位“RAG+KV”优化在方法谱系中的位置。
 
 - (arXiv'2025) [**Key, Value, Compress: A Systematic Exploration of KV Cache Compression Strategies**](https://arxiv.org/abs/2503.11816) (KV compression taxonomy, evaluation, latency-impact analysis): 对 KV 压缩方法做系统分类与实验评测，补齐“方法很多但选型缺乏统一视角”的痛点，适合做工程选型与 ablation 设计的参考框架。
+
+- (arXiv'2026) [**Agentic Reasoning for Large Language Models**](https://arxiv.org/pdf/2601.12538) (Agentic Reasoning, foundational/self-evolving/collective dimensions, in-context/post-training optimization, LLM agents): 面向 LLM 在开放动态环境中缺乏交互、适应与协作能力的问题，提出 Agentic Reasoning 范式，从基础能力（规划、工具使用、搜索）、自进化（反馈、记忆、适应）、集体协作（多智能体角色分配与协调）三大维度构建体系，结合上下文内推理与训练后优化桥接思考与行动，适用于科学发现、机器人、医疗、网页探索等领域的智能体系统设计与优化。
