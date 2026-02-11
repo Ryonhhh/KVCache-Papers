@@ -23,6 +23,14 @@
 - (NeurIPS'2025) [**KVLink: Accelerating Large Language Models via Efficient KV Cache Reuse**](https://neurips.cc/virtual/2025/poster/116061) (document KV precompute, position adjustment, special tokens, KV reuse): 面向多请求共享同一检索文档/背景材料导致重复编码的问题，将文档独立预计算 KV，在线按检索结果拼接复用，并通过 special tokens、注意力约束与位置调整缓解跨段依赖缺失，适合文档复用率高的 RAG 服务以减少重复 prefill。
 
 
+## Multimodal KV Reuse & Position-Independent Caching (Optional but Practical)
+
+- (arXiv'2025) [**MPIC: Position-Independent Multimodal Context Caching System for Efficient MLLM Serving**](https://arxiv.org/abs/2502.01960) (multimodal caching, position-independent reuse, reuse+recompute, MLLM serving): 面向多模态（文本-图像交错）与 multimodal RAG 中 prefix caching 更难命中的问题，把 PIC 扩展到多模态 KV：支持 KV 在本地/远端介质存储与并行加载，并集成 reuse+recompute 机制控制精度损失，代表“位置无关复用+重算修复”在 MLLM 的工程化路线。
+
+- (arXiv'2025) [**MEPIC: Memory Efficient Position Independent Caching for LLM Serving**](https://arxiv.org/abs/2512.16822) (memory-efficient PIC, paged KV layout, block-level recomputation, RoPE fusion): 面向 PIC 在显存节省有限的痛点，通过 paged KV layout 提升跨请求共享度，并把重算从 token-level 提升到 block-level；同时融合 RoPE/内核级优化降低位置处理开销，扩大 PIC 在长提示与高复用服务中的收益。
+
+- ⭐⭐⭐ (arXiv'2025) [**VLCache: Computing 2% Vision Tokens and Reusing 98% for Vision-Language Inference**](https://arxiv.org/abs/2512.12977) (VLM caching, encoder+KV reuse, non-prefix reuse error, layer-aware recomputation): 同时复用视觉 encoder cache 与 KV cache，并形式化分析非前缀复用误差的累积效应；通过按层动态分配的重算策略在极低计算比例下逼近 full recompute，并已集成到 SGLang，适合多模态 RAG/多次复用同图像输入的服务形态。
+
 ## KV Cache Systems (Tiering / Sharing / Offloading / I/O-Aware Recomputation)
 
 - ⭐⭐⭐ (arXiv'2025) [**KVShare: Semantic-Aware Key-Value Cache Sharing for Efficient Large Language Model Serving**](https://arxiv.org/abs/2503.16525) (multi-tenant KV reuse, semantic alignment, differential editing, serving system): 面向多租户服务中“严格前缀复用难命中、语义缓存又可能损伤多样性/一致性”的痛点，通过语义对齐与差分编辑实现更细粒度的 KV 共享，并配合服务系统设计在不显著伤害准确性的前提下提升复用收益。
@@ -40,49 +48,6 @@
 - (arXiv'2025) [**ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference**](https://arxiv.org/abs/2410.21465) (shadow cache, tiered KV, throughput-oriented): 用“主缓存+影子缓存”分层：主缓存保留高频 token，影子缓存保留关键低频 token，在吞吐与质量之间折中；适合长上下文与长文 RAG 的高并发吞吐优先场景。
 
 - (ICML'2025) [**SpeCache: Speculative Key-Value Caching for Efficient Generation of LLMs**](https://proceedings.mlr.press/v267/jie25a.html) (CPU offload, speculative prefetch, top-k KV fetch, VRAM reduction): 将完整 KV cache 卸载到 CPU，GPU 仅保留摘要并按步动态取回 top-k 关键 KV；引入投机预测与预取并行降低传输额外时延，适合显存紧张但主机内存充足的长上下文/RAG。
-
-
-## Multimodal KV Reuse & Position-Independent Caching (Optional but Practical)
-
-- (arXiv'2025) [**MPIC: Position-Independent Multimodal Context Caching System for Efficient MLLM Serving**](https://arxiv.org/abs/2502.01960) (multimodal caching, position-independent reuse, reuse+recompute, MLLM serving): 面向多模态（文本-图像交错）与 multimodal RAG 中 prefix caching 更难命中的问题，把 PIC 扩展到多模态 KV：支持 KV 在本地/远端介质存储与并行加载，并集成 reuse+recompute 机制控制精度损失，代表“位置无关复用+重算修复”在 MLLM 的工程化路线。
-
-- (arXiv'2025) [**MEPIC: Memory Efficient Position Independent Caching for LLM Serving**](https://arxiv.org/abs/2512.16822) (memory-efficient PIC, paged KV layout, block-level recomputation, RoPE fusion): 面向 PIC 在显存节省有限的痛点，通过 paged KV layout 提升跨请求共享度，并把重算从 token-level 提升到 block-level；同时融合 RoPE/内核级优化降低位置处理开销，扩大 PIC 在长提示与高复用服务中的收益。
-
-- ⭐⭐⭐ (arXiv'2025) [**VLCache: Computing 2% Vision Tokens and Reusing 98% for Vision-Language Inference**](https://arxiv.org/abs/2512.12977) (VLM caching, encoder+KV reuse, non-prefix reuse error, layer-aware recomputation): 同时复用视觉 encoder cache 与 KV cache，并形式化分析非前缀复用误差的累积效应；通过按层动态分配的重算策略在极低计算比例下逼近 full recompute，并已集成到 SGLang，适合多模态 RAG/多次复用同图像输入的服务形态。
-
-
-## Cache in RAG/Agent Pipelines: Semantic / Tool / Knowledge Caching
-
-- (NeurIPS'2025) [**Generative Caching for Structurally Similar Prompts and Responses (GenCache)**](https://www.microsoft.com/en-us/research/wp-content/uploads/2025/09/GenCache_NeurIPS25.pdf) (generative cache, structurally similar prompts, agent workflows, correctness): 面向 agent/workflow 中“结构相似但细节不同”的 prompts，GenCache 不直接返回旧 response（避免语义缓存忽略关键差异导致错误），而是从同簇 prompt-response 对中抽取“生成模式”，以可执行 program 形式缓存；命中时本地执行 program 生成差异感知的新响应，在提高命中率的同时尽量控制 negative hit，并降低端到端时延。
-
-
-- (EuroMLSys'2024) [**RAGCache: Efficient Knowledge Caching for Retrieval-Augmented Generation**](https://arxiv.org/abs/2404.12457) (RAG pipeline caching, multi-level caching, order-sensitive reuse, consistency): 从系统视角做 RAG 多级缓存（检索结果/文档块/中间表示等），重点解决文档顺序敏感导致难复用的问题；通过缓存组织与一致性策略提升命中率，并在端到端链路上优化延迟与成本。
-
-- (NLPOSS'2023) [**GPTCache: An Open-Source Semantic Cache for LLM Applications Enabling Faster Answers and Cost Savings**](https://aclanthology.org/2023.nlposs-1.24.pdf) (semantic matching, embedding cache, modular design): 通过 embedding 语义相似度检索历史问答对以复用答案，降低重复调用导致的延迟与 token 成本，适合作为应用层语义缓存的工程基线。
-
-- (VLDB'2025 Demo) [**ContextCache: Context-Aware Semantic Cache for Multi-Turn Queries in Large Language Models**](https://arxiv.org/abs/2506.22791) (context-aware keying, multi-turn dialogue, hit-rate optimization): 面向多轮对话构建上下文感知缓存键并语义匹配，缓解传统语义缓存忽略对话历史导致的低命中与不一致问题。
-
-- (arXiv'2025) [**vCache: Verified Semantic Prompt Caching**](https://arxiv.org/abs/2502.03771v4) (verification, semantic equivalence, correctness): 针对语义匹配缓存容易出现 false positive 的风险，引入轻量验证机制确保命中在语义逻辑上严格等价，在保持低延迟优势的同时提升正确性与安全性。
-
-- (NeurIPS'2025) [**SmartCache: Context-aware Semantic Cache for Efficient Multi-turn LLM Inference**](https://openreview.net/pdf/5bc13f5689dfb66b132abd36782eb71e1da88f36.pdf) (context-aware cache, sub-structure matching, dynamic eviction): 面向复杂多轮推理，利用更强的上下文/结构感知匹配与动态淘汰策略识别高价值语义片段并复用，降低长上下文推理 FLOPs 并提高效率。
-
-- (arXiv'2025) [**Asteria: Semantic-Aware Cross-Region Caching for Agentic LLM Tool Access**](https://arxiv.org/abs/2509.17360) (distributed caching, tool-result reuse, cross-region latency): 面向 agent 工具调用的跨地域延迟与重复调用成本，通过语义感知分布式缓存复用昂贵的工具执行结果与中间态，降低跨地域通信延迟并减少工具重复调用。
-
-- (arXiv'2024) [**MeanCache: User-Centric Semantic Caching for LLM Web Services**](https://arxiv.org/abs/2403.02694) (user-centric semantic cache, federated learning, privacy, query similarity): 提出用户侧本地语义缓存并用联邦学习训练相似度模型，在不集中存储用户数据的前提下提升相似查询匹配精度，适合面向终端/个性化服务的语义缓存形态。
-
-- (arXiv'2024) [**GPT Semantic Cache: Reducing LLM Costs and Latency via Semantic Embedding Caching**](https://arxiv.org/abs/2411.05276) (semantic embedding cache, Redis, cost reduction): 用工程化的 embedding 语义缓存（如 Redis）检索相似问题并复用已有回答，强调降低重复 API 调用成本与响应延迟，适合作为轻量语义缓存 baseline。
-
-- (arXiv'2026) [**Semantic Caching and Intent-Driven Context Optimization for Multi-Agent Natural Language to Code Systems**](https://arxiv.org/abs/2601.11687) (semantic caching, intent classifier, prompt assembly, multi-agent system): 将语义缓存与意图识别驱动的上下文裁剪/拼装结合，用结构化决策减少 prompt token 消耗并控制命中误差，适合作为“Agent 侧缓存 + Context 优化”类产品/系统参考。
-
-- (arXiv'2025) [**Category-Aware Semantic Caching for Heterogeneous LLM Workloads**](https://arxiv.org/abs/2510.26835) (semantic caching, category-specific thresholds, TTL/quota, hybrid storage): 面向异构工作负载用“按类别差异化阈值/TTL/配额”的方式管理语义缓存命中与淘汰，并采用内存向量索引 + 外部存储的混合架构降低 miss 代价，适合线上语义缓存的工程化策略设计。
-
-- (arXiv'2025) [**Semantic Caching for Low-Cost LLM Serving: From Offline Learning to Online Adaptation**](https://arxiv.org/abs/2508.07675) (semantic cache eviction, online learning, cost-aware policies, theory-to-system): 将语义缓存淘汰建模为带不确定分布的学习问题，提供离线最优化与在线自适应框架与算法保证，适合做“有理论支撑的 cache eviction/placement”方向。
-
-
-## Cache-Augmented Generation (CAG) / Retrieval-Free Caching (Optional)
-
-- (arXiv'2024) [**Don't Do RAG: When Cache-Augmented Generation is All You Need for Knowledge Tasks**](https://arxiv.org/abs/2412.15605) (cache-augmented generation, preload knowledge, retrieval-free QA): 提出用长上下文把可控规模知识库“整包预加载”并缓存其运行时状态以绕开实时检索，作为 RAG 的反向对照范式；适合检索链路复杂/延迟敏感且知识库规模可控的业务场景。
-
 
 ## KV Cache Compression / Eviction / Quantization (Long-Context, RAG-Compatible)
 
@@ -143,6 +108,44 @@
 
 - (arXiv'2024) [**Model Tells You Where to Merge: Adaptive KV Cache Merging for LLMs on Long-Context Tasks**](https://arxiv.org/abs/2407.08454) (KV merging, token similarity, adaptive compression, long-context): 观察同序列中 key state 的相似性并做自适应 merging，在不显著牺牲质量下压缩 KV；与驱逐/量化正交，适合做组合策略（merge + quantize / merge + eviction）。
 
+## KV Cache Offloading
+## KV Offloading（去重版：不包含你清单里已出现的 KVPR / Mooncake / IMPRESS / ShadowKV / SpeCache 等）
+
+- (arXiv'2026) [**ParisKV: Fast and Drift-Robust KV-Cache Retrieval for Long-Context LLM Inference**](https://arxiv.org/abs/2602.07721) (CPU-offloaded KV, UVA, on-demand top-k fetch, drift robustness): 面向超长上下文，把 KV **offload 到 CPU** 后做 **GPU-native 检索 + 量化重排** 来按需 top-k 取回，并重点处理分布漂移下的检索鲁棒性。
+
+- ⭐⭐⭐ (OSDI'2024) [**InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management**](https://www.usenix.org/conference/osdi24/presentation/lee) (offloading-based inference, token speculation, reduce transfer): 针对 **KV offload 后 CPU→GPU 传输成为瓶颈**，通过“少量 rehearsal/推测”锁定关键 token，减少需要搬运/参与后续注意力的 KV 量，从而提升长文生成吞吐并更稳保持准确性。
+
+- ⭐⭐⭐ (arXiv'2025) [**LMCache: An Efficient KV Cache Layer for Enterprise-Scale LLM Inference**](https://arxiv.org/abs/2510.09665) (KV cache layer, offloading, cross-engine transfer, PD disaggregation): 把 KV 当成“数据平面层”：支持 **KV offloading** 与 **跨实例/跨引擎 KV 传输**（含 prefill–decode 解耦/跨引擎 cache transfer），面向企业级推理做系统化落地。
+
+- ⭐⭐⭐ (arXiv'2025) [**KVSwap: Disk-aware KV Cache Offloading for Long-Context On-device Inference**](https://arxiv.org/abs/2511.11907) (disk KV offload, device-aware I/O, prefetch/overlap): 面向端侧/移动端，把 KV **offload 到磁盘**并显式考虑块设备 I/O 特性（如分组读取、预取与计算重叠），在紧内存预算下提升长上下文推理吞吐并尽量维持质量。
+
+- (ACM'2025) [**PQCache: Product Quantization-based KVCache for Long-Context LLM Inference**](https://dl.acm.org/doi/10.1145/3725338) (PQ, approximate access, offloaded KV): 用 **PQ/近似向量检索**思想对 offloaded KV 做压缩与快速访问，降低取回开销并保持可用精度，适合作为“KV 检索/取回”类方案的基线参考。
+
+- (CHEOPS'2025) [**An I/O Characterizing Study of Offloading LLM Models and KV Caches to NVMe**](https://atlarge-research.com/pdfs/2025-cheops-llm.pdf) (NVMe offload measurement, I/O characterization): 从系统测量角度刻画 **KV/权重 offload 到 NVMe** 的 I/O 行为与瓶颈，为“offload 为什么变慢/抖动”提供实证依据与可复用的分析视角。
+
+## Cache in RAG/Agent Pipelines: Semantic / Tool / Knowledge Caching
+
+- (NeurIPS'2025) [**Generative Caching for Structurally Similar Prompts and Responses (GenCache)**](https://www.microsoft.com/en-us/research/wp-content/uploads/2025/09/GenCache_NeurIPS25.pdf) (generative cache, structurally similar prompts, agent workflows, correctness): 面向 agent/workflow 中“结构相似但细节不同”的 prompts，GenCache 不直接返回旧 response（避免语义缓存忽略关键差异导致错误），而是从同簇 prompt-response 对中抽取“生成模式”，以可执行 program 形式缓存；命中时本地执行 program 生成差异感知的新响应，在提高命中率的同时尽量控制 negative hit，并降低端到端时延。
+
+- (EuroMLSys'2024) [**RAGCache: Efficient Knowledge Caching for Retrieval-Augmented Generation**](https://arxiv.org/abs/2404.12457) (RAG pipeline caching, multi-level caching, order-sensitive reuse, consistency): 从系统视角做 RAG 多级缓存（检索结果/文档块/中间表示等），重点解决文档顺序敏感导致难复用的问题；通过缓存组织与一致性策略提升命中率，并在端到端链路上优化延迟与成本。
+
+- (NLPOSS'2023) [**GPTCache: An Open-Source Semantic Cache for LLM Applications Enabling Faster Answers and Cost Savings**](https://aclanthology.org/2023.nlposs-1.24.pdf) (semantic matching, embedding cache, modular design): 通过 embedding 语义相似度检索历史问答对以复用答案，降低重复调用导致的延迟与 token 成本，适合作为应用层语义缓存的工程基线。
+
+- (VLDB'2025 Demo) [**ContextCache: Context-Aware Semantic Cache for Multi-Turn Queries in Large Language Models**](https://arxiv.org/abs/2506.22791) (context-aware keying, multi-turn dialogue, hit-rate optimization): 面向多轮对话构建上下文感知缓存键并语义匹配，缓解传统语义缓存忽略对话历史导致的低命中与不一致问题。
+
+- (arXiv'2025) [**vCache: Verified Semantic Prompt Caching**](https://arxiv.org/abs/2502.03771v4) (verification, semantic equivalence, correctness): 针对语义匹配缓存容易出现 false positive 的风险，引入轻量验证机制确保命中在语义逻辑上严格等价，在保持低延迟优势的同时提升正确性与安全性。
+
+- (NeurIPS'2025) [**SmartCache: Context-aware Semantic Cache for Efficient Multi-turn LLM Inference**](https://openreview.net/pdf/5bc13f5689dfb66b132abd36782eb71e1da88f36.pdf) (context-aware cache, sub-structure matching, dynamic eviction): 面向复杂多轮推理，利用更强的上下文/结构感知匹配与动态淘汰策略识别高价值语义片段并复用，降低长上下文推理 FLOPs 并提高效率。
+
+- (arXiv'2024) [**MeanCache: User-Centric Semantic Caching for LLM Web Services**](https://arxiv.org/abs/2403.02694) (user-centric semantic cache, federated learning, privacy, query similarity): 提出用户侧本地语义缓存并用联邦学习训练相似度模型，在不集中存储用户数据的前提下提升相似查询匹配精度，适合面向终端/个性化服务的语义缓存形态。
+
+- (arXiv'2024) [**GPT Semantic Cache: Reducing LLM Costs and Latency via Semantic Embedding Caching**](https://arxiv.org/abs/2411.05276) (semantic embedding cache, Redis, cost reduction): 用工程化的 embedding 语义缓存（如 Redis）检索相似问题并复用已有回答，强调降低重复 API 调用成本与响应延迟，适合作为轻量语义缓存 baseline。
+
+- (arXiv'2026) [**Semantic Caching and Intent-Driven Context Optimization for Multi-Agent Natural Language to Code Systems**](https://arxiv.org/abs/2601.11687) (semantic caching, intent classifier, prompt assembly, multi-agent system): 将语义缓存与意图识别驱动的上下文裁剪/拼装结合，用结构化决策减少 prompt token 消耗并控制命中误差，适合作为“Agent 侧缓存 + Context 优化”类产品/系统参考。
+
+- (arXiv'2025) [**Category-Aware Semantic Caching for Heterogeneous LLM Workloads**](https://arxiv.org/abs/2510.26835) (semantic caching, category-specific thresholds, TTL/quota, hybrid storage): 面向异构工作负载用“按类别差异化阈值/TTL/配额”的方式管理语义缓存命中与淘汰，并采用内存向量索引 + 外部存储的混合架构降低 miss 代价，适合线上语义缓存的工程化策略设计。
+
+- (arXiv'2025) [**Semantic Caching for Low-Cost LLM Serving: From Offline Learning to Online Adaptation**](https://arxiv.org/abs/2508.07675) (semantic cache eviction, online learning, cost-aware policies, theory-to-system): 将语义缓存淘汰建模为带不确定分布的学习问题，提供离线最优化与在线自适应框架与算法保证，适合做“有理论支撑的 cache eviction/placement”方向。
 
 ## Serving Systems / Prefill Optimization (Background but Often Used)
 
