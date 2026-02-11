@@ -109,8 +109,6 @@
 - (arXiv'2024) [**Model Tells You Where to Merge: Adaptive KV Cache Merging for LLMs on Long-Context Tasks**](https://arxiv.org/abs/2407.08454) (KV merging, token similarity, adaptive compression, long-context): 观察同序列中 key state 的相似性并做自适应 merging，在不显著牺牲质量下压缩 KV；与驱逐/量化正交，适合做组合策略（merge + quantize / merge + eviction）。
 
 ## KV Cache Offloading
-## KV Offloading（去重版：不包含你清单里已出现的 KVPR / Mooncake / IMPRESS / ShadowKV / SpeCache 等）
-
 - (arXiv'2026) [**ParisKV: Fast and Drift-Robust KV-Cache Retrieval for Long-Context LLM Inference**](https://arxiv.org/abs/2602.07721) (CPU-offloaded KV, UVA, on-demand top-k fetch, drift robustness): 面向超长上下文，把 KV **offload 到 CPU** 后做 **GPU-native 检索 + 量化重排** 来按需 top-k 取回，并重点处理分布漂移下的检索鲁棒性。
 
 - ⭐⭐⭐ (OSDI'2024) [**InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management**](https://www.usenix.org/conference/osdi24/presentation/lee) (offloading-based inference, token speculation, reduce transfer): 针对 **KV offload 后 CPU→GPU 传输成为瓶颈**，通过“少量 rehearsal/推测”锁定关键 token，减少需要搬运/参与后续注意力的 KV 量，从而提升长文生成吞吐并更稳保持准确性。
